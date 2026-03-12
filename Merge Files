@@ -1,0 +1,18 @@
+library(dplyr)
+
+filename1 <- "InformationSystems_SeattleBoise.csv"
+filename2 <- "InformationSystems_BoiseSeattleOregon.csv"
+
+filepath <- "C:/Users/amelia/OneDrive/College/Spring25/ITM340/GroupProject/PrivateScrape/Merge"
+
+fullpath1 <- paste0(filepath, "/", filename1)
+fullpath2 <- paste0(filepath, "/", filename2)
+
+df1 <- read.csv(fullpath1, stringsAsFactors = FALSE)
+df2 <- read.csv(fullpath2, stringsAsFactors = FALSE)
+
+df_combined <- bind_rows(df1, df2)
+
+df_combined <- df_combined %>% select(-location)
+
+write.csv(df_combined, fullpath1, row.names = FALSE)
