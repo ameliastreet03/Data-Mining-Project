@@ -1,0 +1,138 @@
+library(dplyr)
+library(stringr)
+library(readr)
+
+df <- read.csv("C:/Users/amelia/Downloads/IS_Postings_With_NewVars.csv")
+
+# Clean and lowercase job text
+df <- df %>%
+  mutate(description_clean = iconv(full_description, from = "latin1", to = "UTF-8", sub = "") %>% tolower())
+
+# Standardize salary
+df <- df %>%
+  mutate(standardized_salary = case_when(
+    str_detect(salary, "hour") & str_detect(salary, "\\d") ~ {
+      hourly <- str_extract(salary, "\\d{2,6}(\\.\\d{1,2})?")
+      as.numeric(hourly) * 40 * 52
+    },
+    str_detect(salary, "year") & str_detect(salary, "\\d") ~ {
+      yearly <- str_extract(salary, "\\d{5,6}(\\.\\d{1,2})?")
+      as.numeric(yearly)
+    },
+    TRUE ~ NA_real_
+  ))
+
+# Extract salary range
+df <- df %>%
+  mutate(
+    salary_min_extracted = str_extract(salary, "(?<!\\d)\\d{4,6}(\\.\\d+)?") %>% as.numeric(),
+    salary_max_extracted = str_extract(salary, "-\\s*(\\d{5,6})") %>% str_remove("-\\s*") %>% as.numeric()
+  )
+
+# Education level
+df <- df %>%
+  mutate(education_level = case_when(
+    str_detect(description_clean, regex("phd|doctorate", ignore_case = TRUE)) ~ "PhD",
+    str_detect(description_clean, regex("master'?s|m\\.s\\b|m\\.sc\\b|mba", ignore_case = TRUE)) ~ "Masters",
+    str_detect(description_clean, regex("bachelor'?s|b\\.a\\b|b\\.s\\b|b\\.sc\\b|bs|ba|bba|bbs", ignore_case = TRUE)) ~ "Bachelors",
+    str_detect(description_clean, regex("associate'?s|associate degree|diploma|community college", ignore_case = TRUE)) ~ "Diploma/Associate",
+    str_detect(description_clean, regex("college degree|university degree", ignore_case = TRUE)) ~ "Bachelors",
+    TRUE ~ "None"
+  ))
+
+# Experience
+df <- df %>%
+  mutate(years_experience = str_extract(description_clean, "\\b\\d+\\s*(\\+)?\\s*(years|yrs)[^a-z]*experience") %>%
+           str_extract("\\d+") %>%
+           as.numeric())
+
+# Work Type Expanded
+df <- df %>%
+  mutate(work_type = case_when(
+    str_detect(description_clean, regex("100% remote|fully remote|work from home|remote only|permanently remote", ignore_case = TRUE)) ~ "Remote",
+    str_detect(description_clean, regex("hybrid|split time|home and office|hybrid schedule|partial remote", ignore_case = TRUE)) ~ "Hybrid",
+    str_detect(description_clean, regex("on[- ]?site|in[- ]?person|work onsite|onsite|work in office", ignore_case = TRUE)) ~ "On-site",
+    str_detect(description_clean, regex("contract|contractor|temp|temporary", ignore_case = TRUE)) ~ "Contract",
+    str_detect(description_clean, regex("part[- ]?time", ignore_case = TRUE)) ~ "Part-Time",
+    str_detect(description_clean, regex("remote", ignore_case = TRUE)) ~ "Remote",
+    TRUE ~ "Unknown"
+  ))
+
+# Seniority Level Detection
+df <- df %>%
+  mutate(seniority_level = case_when(
+    str_detect(description_clean, "entry level|junior|jr\\b|early career") ~ "Entry",
+    str_detect(description_clean, "mid level|intermediate|mid-career") ~ "Mid",
+    str_detect(description_clean, "senior|sr\\b|lead|principal|expert") ~ "Senior",
+    str_detect(description_clean, "director|head of|vp|chief|executive") ~ "Director+",
+    TRUE ~ "Unspecified"
+  ))
+
+# Job Category (Broadened Coverage)
+df <- df %>%
+  mutate(job_category = case_when(
+    str_detect(description_clean, "business analyst|business systems analyst|ba\\b") ~ "Business Analyst",
+    str_detect(description_clean, "data scientist|data science") ~ "Data Scientist",
+    str_detect(description_clean, "data engineer|etl developer") ~ "Data Engineer",
+    str_detect(description_clean, "ml engineer|machine learning|ai engineer") ~ "ML/AI Engineer",
+    str_detect(description_clean, "cloud engineer|cloud architect|cloud developer") ~ "Cloud Engineer",
+    str_detect(description_clean, "devops|site reliability engineer|sre") ~ "DevOps Engineer",
+    str_detect(description_clean, "project manager|scrum master|agile coach") ~ "Project Manager",
+    str_detect(description_clean, "product manager") ~ "Product Manager",
+    str_detect(description_clean, "software engineer|developer|programmer|application engineer") ~ "Software Engineer",
+    str_detect(description_clean, "qa engineer|test engineer|quality assurance") ~ "QA/Test Engineer",
+    str_detect(description_clean, "security analyst|cybersecurity|information security|infosec") ~ "Security Analyst",
+    str_detect(description_clean, "systems analyst|system administrator|systems administrator") ~ "Systems Analyst",
+    str_detect(description_clean, "network engineer|network administrator") ~ "Network Engineer",
+    str_detect(description_clean, "desktop support|technical support|help desk|tech support") ~ "IT Support / Help Desk",
+    str_detect(description_clean, "technical writer|documentation specialist") ~ "Technical Writer",
+    str_detect(description_clean, "bi analyst|business intelligence|reporting analyst|power bi developer|tableau developer") ~ "BI Analyst / Developer",
+    str_detect(description_clean, "erp analyst|sap|oracle ebs|netsuite") ~ "ERP Specialist",
+    str_detect(description_clean, "crm administrator|salesforce|dynamics crm") ~ "CRM Specialist",
+    str_detect(description_clean, "ui/ux designer|user interface|user experience|ux researcher") ~ "UI/UX Designer",
+    str_detect(description_clean, "coordinator") ~ "Coordinator",
+    str_detect(description_clean, "operations|ops manager|service delivery") ~ "Operations Manager",
+    str_detect(description_clean, "marketing|brand manager|digital campaign") ~ "Marketing",
+    str_detect(description_clean, "training specialist|trainer|learning") ~ "Training & Development",
+    str_detect(description_clean, "content writer|editor|communications") ~ "Content & Communications",
+    str_detect(description_clean, "compliance|regulatory|governance") ~ "Compliance",
+    str_detect(description_clean, "recruiter|talent acquisition") ~ "Tech Recruiter",
+    str_detect(description_clean, "it manager|it director") ~ "IT Manager",
+    str_detect(description_clean, "architect") ~ "IT Architect",
+    str_detect(description_clean, "analyst") ~ "General Analyst",
+    str_detect(description_clean, "engineer") ~ "General Engineer",
+    TRUE ~ "Other"
+  ))
+
+# Keyword flags
+keywords <- c(
+  "python", "java", "kotlin", "c\\+\\+", "c#", "swift", "objective-c", "scala", "sql", 
+  "soql", "bash", "powershell", "machine learning", "deep learning", "natural language processing",
+  "prompt engineering", "generative ai", "retrieval-augmented generation", "pytorch", "tensorflow",
+  "federated learning", "differential privacy", "big data", "spark", "hive", "hadoop", "hdfs", 
+  "presto", "apache kafka", "snowflake", "data modeling", "etl", "feature extraction", 
+  "data visualization", "tableau", "power bi", "data analysis", "data science", "aws", "azure", 
+  "google cloud platform", "oci", "kubernetes", "docker", "jenkins", "terraform", "ci/cd", "git", 
+  "spinnaker", "intune", "security\\+", "cissp", "ccfa", "endpoint security", 
+  "privacy-preserving technologies", "secure software development", "vulnerability management", 
+  "incident response", "secure multi-party computation", "encryption", "security risk assessment", 
+  "crowdstrike", "salesforce", "servicenow", "jira", "asana", "mysql", "oracle", "sap", 
+  "microsoft dynamics", "veeam", "vmware", "nutanix", "splunk", "distributed systems", 
+  "runtime systems", "apis", "system integration", "infrastructure design", "version control", 
+  "systems architecture", "performance optimization", "configuration management", "devsecops", 
+  "high availability", "fault tolerance", "technical program management", "system design", 
+  "project management", "cross-functional collaboration", "code review", "risk assessment", 
+  "problem solving", "agile methodology", "remote collaboration", "stakeholder engagement")
+
+
+for (kw in keywords) {
+  col_name <- paste0("kw_", gsub(" ", "_", kw))
+  df[[col_name]] <- ifelse(str_detect(df$description_clean, kw), 1, 0)
+}
+
+# Drop columns we don't need
+df <- df %>%
+  select(-description, -full_description, -salary_type, -salary, -salary_min, -site)
+
+# Write output
+write_csv(df, "C:/Users/amelia/Downloads/IS_Postings_Final_Enhanced2.csv")
