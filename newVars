@@ -1,0 +1,52 @@
+library(dplyr)
+library(stringr)
+library(readr)
+
+# Load your dataset
+df <- read_csv("C:/Will/IS_BoiseSeattleOregon_Clean.csv")
+
+# Clean weird characters first THEN lowercase
+df <- df %>%
+  mutate(description_clean = iconv(full_description, from = "latin1", to = "UTF-8", sub = "") %>% 
+           tolower())
+
+# Create Certifications Required Variable
+df <- df %>%
+  mutate(cert_required = case_when(
+    is.na(description_clean) ~ "Unknown",
+    str_detect(description_clean, paste(c(
+      "certification", "cissp", "cisa", "pmp", "security\\+", 
+      "network\\+", "aws certified", "azure certification", 
+      "google certification", "scrum master"
+    ), collapse = "|")) ~ "Yes",
+    TRUE ~ "No"
+  ))
+
+# Create Cloud Services Variable
+df <- df %>%
+  mutate(cloud_services = case_when(
+    is.na(description_clean) ~ "Unknown",
+    str_detect(description_clean, "aws|amazon web services") & 
+      str_detect(description_clean, "azure|gcp|google cloud") ~ "Multi-Cloud",
+    str_detect(description_clean, "aws|amazon web services") ~ "AWS",
+    str_detect(description_clean, "azure") ~ "Azure",
+    str_detect(description_clean, "gcp|google cloud") ~ "GCP",
+    TRUE ~ "None"
+  ))
+
+# Create Project Management Methodology Variable
+df <- df %>%
+  mutate(pm_methodology = case_when(
+    is.na(description_clean) ~ "Unknown",
+    str_detect(description_clean, "agile|scrum|kanban") ~ "Agile/Scrum",
+    str_detect(description_clean, "waterfall|predictive|pmbok") ~ "Predictive",
+    str_detect(description_clean, "hybrid") ~ "Hybrid",
+    TRUE ~ "None"
+  ))
+
+# Optional: Drop temp clean column
+df <- df %>% select(-description_clean)
+
+
+write_csv(df, "~/Downloads/IS_Postings_With_NewVars.csv")
+
