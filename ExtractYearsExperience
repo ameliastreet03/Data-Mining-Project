@@ -1,0 +1,35 @@
+library(stringr)
+
+# Convert letter numbers to numbers
+letter_num <- c(' one ',' two ',' three ',' four ',' five ',' six ',' seven ',' eight ',' nine ',' ten ')
+nums <- c(' 1 ',' 2 ',' 3 ',' 4 ',' 5 ',' 6 ',' 7 ',' 8 ',' 9 ',' 10 ')
+
+for(i in 1:10){
+  df$full_description <- gsub(letter_num[i],nums[i],df$full_description)
+}
+
+# Convert " or more" to +
+df$full_description <- gsub(" or more","+",df$full_description)
+
+# Remove parenthesis number e.g. five (5) years 
+df$full_description <- gsub("\\(([0-9]|[1-9][0-9])\\)", "", df$full_description)
+
+# Match patter of #+ years 
+df$years_experience <- str_extract_all(df$full_description, "(([0-9]|[1-9][0-9])\\s?\\-?\\s?)?([0-9]|[1-9][0-9])\\s?\\+? year")
+df$years_experience
+
+# Extract number only - no text
+df$years_experience <- str_extract_all(df$years_experience,'([0-9]|[1-9][0-9])+')
+df$years_experience
+
+# For each job posting, determine min and max years of experience
+df$min_exp <- NA
+df$max_exp <- NA
+
+# Loop through each posting - if years experience is greater than 20, set it to NA
+for(i in 1:nrow(df)){
+  df$min_exp[i] <- min(replace(as.numeric(df$years_experience[[i]]), as.numeric(df$years_experience[[i]]) >= 20, NA), na.rm =TRUE)
+  df$max_exp[i] <- max(replace(as.numeric(df$years_experience[[i]]), as.numeric(df$years_experience[[i]]) >= 20, NA), na.rm =TRUE)
+}
+
+
