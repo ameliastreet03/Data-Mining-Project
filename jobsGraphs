@@ -1,0 +1,238 @@
+# =================================================================================
+#                           LOAD LIBRARIES
+# =================================================================================
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(corrplot)
+
+# =================================================================================
+#                           LOAD DATA
+# =================================================================================
+df <- read.csv("C:/Users/amelia/OneDrive/College/Spring25/ITM340/GroupProject/Data/IS_Postings_Final_Enhanced2.csv")
+
+# =================================================================================
+#                           CORRELATION ANALYSIS
+# =================================================================================
+
+# Filter numeric skill columns and salary
+skills <- df %>%
+  select(starts_with("kw_"), standardized_salary) %>%
+  na.omit()
+
+# Compute correlation
+cor_matrix <- cor(skills)
+
+# Extract only correlation with salary
+cor_salary <- cor_matrix["standardized_salary", setdiff(colnames(cor_matrix), "standardized_salary")]
+cor_salary_df <- data.frame(Skill = names(cor_salary), Correlation = as.numeric(cor_salary))
+
+# =================================================================================
+#                           GENERAL DISTRIBUTIONS
+# =================================================================================
+
+# --- Job Category Distribution ---
+ggplot(df, aes(x = job_category)) +
+  geom_bar(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Job Category Distribution", x = "Job Category", y = "Count") +
+  theme_minimal()
+
+# --- Work Type Distribution (Excluding Unknown) ---
+df_filtered_work <- df %>% filter(work_type != "Unknown")
+
+ggplot(df_filtered_work, aes(x = work_type)) +
+  geom_bar(fill = "darkgreen") +
+  labs(title = "Work Type Distribution", x = "Work Type", y = "Count") +
+  theme_minimal()
+
+# --- Education Level Distribution ---
+ggplot(df, aes(x = education_level)) +
+  geom_bar(fill = "orange") +
+  labs(title = "Education Level Distribution", x = "Education Level", y = "Count") +
+  theme_minimal()
+
+# =================================================================================
+#                           SALARY ANALYSIS
+# =================================================================================
+
+# --- Salary by Work Type ---
+work_salary <- df %>%
+  filter(work_type %in% c("Remote", "Hybrid", "On-site", "Contract", "Part-Time")) %>%
+  filter(!is.na(standardized_salary))
+
+ggplot(work_salary, aes(x = work_type, y = standardized_salary)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(title = "Standardized Salary by Work Type", x = "Work Type", y = "Salary (USD)") +
+  theme_minimal()
+
+# --- Histogram of Salaries ---
+ggplot(df, aes(x = standardized_salary)) +
+  geom_histogram(binwidth = 10000, fill = "dodgerblue", color = "black") +
+  labs(title = "Histogram of Standardized Salaries", x = "Salary (Yearly USD)", y = "Number of Jobs") +
+  theme_minimal()
+
+# --- Salary by Job Category ---
+ggplot(df, aes(x = job_category, y = standardized_salary)) +
+  geom_boxplot(fill = "lightcoral") +
+  coord_flip() +
+  labs(title = "Salary Ranges by Job Category", x = "Job Category", y = "Standardized Salary (USD)") +
+  theme_minimal()
+
+# --- Salary Range by Job Category ---
+df %>%
+  filter(!is.na(standardized_salary)) %>%
+  group_by(job_category) %>%
+  summarise(
+    salary_range = max(standardized_salary, na.rm = TRUE) - min(standardized_salary, na.rm = TRUE),
+    count = n(),
+    .groups = "drop"
+  ) %>%
+  filter(count > 30) %>%
+  arrange(desc(salary_range)) %>%
+  ggplot(aes(x = reorder(job_category, salary_range), y = salary_range)) +
+  geom_col(fill = "darkcyan") +
+  coord_flip() +
+  labs(title = "Salary Range by Job Category", x = "Job Category", y = "Salary Range (USD)") +
+  theme_minimal()
+
+# =================================================================================
+#                           EXPERIENCE ANALYSIS
+# =================================================================================
+
+df_filtered_jobs <- df %>% filter(job_category != "Other")
+
+# --- Average Years Experience by Job Category ---
+df_filtered_jobs %>%
+  group_by(job_category) %>%
+  summarise(avg_exp = mean(years_experience, na.rm = TRUE), .groups = "drop") %>%
+  ggplot(aes(x = reorder(job_category, avg_exp), y = avg_exp)) +
+  geom_col(fill = "purple") +
+  coord_flip() +
+  labs(title = "Average Years Experience by Job Category", x = "Job Category", y = "Avg. Years") +
+  theme_minimal()
+
+# --- Min and Max Years Experience by Job Category ---
+df_filtered_jobs %>%
+  group_by(job_category) %>%
+  summarise(
+    min_exp = min(years_experience, na.rm = TRUE),
+    max_exp = max(years_experience, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = reorder(job_category, max_exp))) +
+  geom_linerange(aes(ymin = min_exp, ymax = max_exp), color = "firebrick", size = 1.5) +
+  coord_flip() +
+  labs(title = "Min vs Max Years Experience by Job Category", x = "Job Category", y = "Years") +
+  theme_minimal()
+
+# =================================================================================
+#                           COMPANY ANALYSIS
+# =================================================================================
+
+# --- Top 20 Companies by Postings ---
+df %>%
+  filter(!is.na(company)) %>%
+  group_by(company) %>%
+  summarise(posting_count = n(), .groups = "drop") %>%
+  arrange(desc(posting_count), company) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(company, posting_count), y = posting_count)) +
+  geom_col(fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Top 20 Companies by Number of Job Postings", x = "Company", y = "Number of Postings") +
+  theme_minimal()
+
+# --- Top Companies Hiring Remote Roles ---
+df %>%
+  filter(work_type == "Remote") %>%
+  group_by(company) %>%
+  summarise(remote_jobs = n(), .groups = "drop") %>%
+  arrange(desc(remote_jobs), company) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(company, remote_jobs), y = remote_jobs)) +
+  geom_col(fill = "mediumblue") +
+  coord_flip() +
+  labs(title = "Top 10 Companies Hiring Remote Roles", x = "Company", y = "Number of Remote Jobs") +
+  theme_minimal()
+
+# --- Entry-Level vs Senior Hiring Companies ---
+seniority_by_company <- df %>%
+  filter(seniority_level %in% c("Entry", "Senior")) %>%
+  group_by(company, seniority_level) %>%
+  summarise(posting_count = n(), .groups = "drop") %>%
+  pivot_wider(names_from = seniority_level, values_from = posting_count, values_fill = 0) %>%
+  mutate(
+    total = Entry + Senior,
+    pct_entry = Entry / total * 100
+  ) %>%
+  filter(total > 10) %>%
+  arrange(desc(pct_entry)) %>%
+  slice_head(n = 10)
+
+ggplot(seniority_by_company, aes(x = reorder(company, pct_entry), y = pct_entry)) +
+  geom_col(fill = "violet") +
+  coord_flip() +
+  labs(title = "Top Companies Favoring Entry-Level Hiring", x = "Company", y = "Entry-Level Hiring %") +
+  theme_minimal()
+
+# =================================================================================
+#                           SKILL INSIGHTS
+# =================================================================================
+
+# --- Top Skills by Salary Premium ---
+skill_salary_premium <- df %>%
+  select(starts_with("kw_"), standardized_salary) %>%
+  pivot_longer(cols = starts_with("kw_"), names_to = "skill", values_to = "has_skill") %>%
+  filter(!is.na(standardized_salary)) %>%
+  group_by(skill) %>%
+  summarise(
+    avg_salary_with_skill = mean(standardized_salary[has_skill == 1], na.rm = TRUE),
+    avg_salary_without_skill = mean(standardized_salary[has_skill == 0], na.rm = TRUE),
+    count_with_skill = sum(has_skill == 1),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    salary_premium = ifelse(is.finite(avg_salary_with_skill - avg_salary_without_skill),
+                            avg_salary_with_skill - avg_salary_without_skill,
+                            NA_real_)
+  ) %>%
+  filter(count_with_skill > 50) %>%
+  arrange(desc(salary_premium))
+
+ggplot(skill_salary_premium[1:20,], aes(x = reorder(skill, salary_premium), y = salary_premium)) +
+  geom_col(fill = "darkorange") +
+  coord_flip() +
+  labs(title = "Top 20 Skills by Salary Premium", x = "Skill", y = "Salary Premium (USD)") +
+  theme_minimal()
+
+# --- Top Skills for Remote Jobs ---
+remote_skills <- df %>%
+  filter(work_type == "Remote") %>%
+  select(starts_with("kw_")) %>%
+  summarise(across(everything(), sum, na.rm = TRUE), .groups = "drop") %>%
+  pivot_longer(cols = everything(), names_to = "skill", values_to = "count") %>%
+  arrange(desc(count)) %>%
+  slice_head(n = 10)
+
+ggplot(remote_skills, aes(x = reorder(skill, count), y = count)) +
+  geom_col(fill = "navy") +
+  coord_flip() +
+  labs(title = "Top Skills in Remote Job Postings", x = "Skill", y = "Mentions") +
+  theme_minimal()
+
+# --- Top Skills for Data Scientist Jobs ---
+data_scientist_skills <- df %>%
+  filter(job_category == "Data Scientist") %>%
+  select(starts_with("kw_")) %>%
+  summarise(across(everything(), sum, na.rm = TRUE), .groups = "drop") %>%
+  pivot_longer(cols = everything(), names_to = "skill", values_to = "count") %>%
+  arrange(desc(count)) %>%
+  slice_head(n = 10)
+
+ggplot(data_scientist_skills, aes(x = reorder(skill, count), y = count)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Top Skills for Data Scientist Jobs", x = "Skill", y = "Mentions") +
+  theme_minimal()
