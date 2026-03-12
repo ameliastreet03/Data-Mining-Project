@@ -1,0 +1,15 @@
+library(dplyr)
+
+filename <- "InformationSystems_BoiseSeattleOregon.csv"
+
+filepath <- "C:/Users/amelia/OneDrive/College/Spring25/ITM340/GroupProject/Code/ScrapeDescription"
+
+fullpath <- paste0(filepath, "/", filename)
+
+df <- read.csv(fullpath, stringsAsFactors = FALSE)
+
+df <- df %>% filter(!is.na(full_description) & full_description != "#N/A")
+
+df <- df %>% select(-assigned_to)
+
+write.csv(df, fullpath, row.names = FALSE)
