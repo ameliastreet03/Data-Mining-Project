@@ -1,0 +1,138 @@
+# Read in current dataset
+
+df <- read.csv("C:/Users/amelia/OneDrive/College/Spring25/ITM340/GroupProject/Data/IS_Postings_Final_Enhanced2.csv")
+
+# Clean slightly
+library(dplyr)
+df <- df %>% select(-X)
+
+# Define your top 10 companies by prevalence of hiring entry-level workers
+top_10_companies <- c("Exyte", "Oracle", "Trinity Health", "Splunk", 
+                      "Oregon Health & Science University", "Apple", 
+                      "Stantec", "Amazon", "Fred Hutchinson Cancer Center", 
+                      "State of Oregon")
+
+# Create Review Dataframe containing the rating (scale 1-5) and a representative review
+reviews_df <- data.frame(
+  review_company = top_10_companies,
+  review_rating = c(4.0, 3.8, 3.6, 4.1, 4.1, 4.6, 3.7, 3.7, 4.1, 3.5), #numeric ratings
+  relevant_review = c(
+    "Pros
+    Salary higher than market rate. 40hr work week, Good benefits for medical,
+    Cons
+    Nobody ever leaves. Growth NIL. Chance of promotion NIL.", 
+    "Pros
+Great coworkers and benefits Solid compensation Hybrid
+Cons
+Management Business Practices High Turn Over", 
+    "Pros
+Remote work, okay benefits not much more to add.
+Cons
+The company seems to be on a downward trend in how they treat their employees and morale. The pay used to be fairly decent in terms of the economy but the company continues to expect more and more and more out of their employees without proper recognition, promotions, or pay increases for the work load. The flexiablity that was previously offered with remote work has went out the window. The cost of living wages are laughable because they quite literally don't measure up to meet the cost of living. The company has increased profits significantly over the last few years yet none of it has been trickled down to the employees who make reimbursements possible to have a more livable wage. The pay is far from competitive. They have got rid of entire departments and outsource to India. For being a non for profit and ministry based company they have become quite greedy. All and all I would not recommend this job to someone else. Take your experiance somwhere where it is value and your paid properly.", #cant find trinity healty
+    "Pros
+Work-life balance is ok with the exception of the times in which engineering is under a tight deadline. Pay has generally been very generous. The managers are usually very personable and easy to like.
+Cons
+We have been through a lot of change lately. Engineering isn't viewed very positively by other organizations (Product, UX) which makes it get things done especially if you are the type of person who is usually good at working across siloes.", #manually found
+    "Pros
+Amazing collegues and research being done. Campus is beautiful. Exposure to many different kinds of research. Health and retirement benefits are good. Remote work available.
+Cons
+Low pay, Bad management. Hard to get reimbursed or approved for expenses. PTO doesn't roll over and it's hard to take time off. Low access to compute or other resources for data processing. Outdated infrastructure and resources. Education benefits are not good.", 
+    "Pros
+We work with geniuses - in every department, We create innovative products that thrill our customers and create new product categories - who else can say that?
+Cons
+ZERO ZERO ZERO work/life balance. Execs have been saying for YEARS that they understand and will make it better. But in actuality, it gets worse every year! It is obviously top management LIP SERVICE because if they meant it, they could fix it tomorrow. They have hundreds of BILLIONS in the bank. If they REALLY cared about employee work/life balance, they could bring aboard the right number of folks to make that issue dissolve. Sick of hearing the lies. Just don't lie about wanting to fix it, when they clearly DON'T care",
+    "Pros
+
+Great working environment. The people, the offices, the culture all make the day fly.
+Countless opportunities for social events.
+Well connected network.
+
+Cons
+
+Companywide ethics are superficial. They focus on sustainability, great, but this is a BlackRock owned company with the goal of Monopolizing the A&E industry. A majority of the companies revenue comes from Military, Medical, and Tech industrial complexes with alternative ethical agendas. The intellectually gifted employees either quit, or burry themselves in their work to not acknowledge this fact.
+
+No clear path to promotion unless you have connections. Promotion upon License completion is not guaranteed within that calendar year.
+
+Very poor pay and benefits.
+
+Very little opportunity to work on flagship projects. Most of the work completed will be existing renovations, or new build industrial design. This means you will be drafting warehouses and picking up redlines for PMs.
+
+At a high level employees are evaluated on a 'utilization rate' scale that determines your value. This can be non- reflective of the employees work performance.
+
+Advice to Management
+
+The way promotions are handled now is often arbitrary, and can leave employees feeling left out, as they didn’t know what they needed to do to be considered. Create a clear path for employees to get promoted that’s clear and fair for everyone to follow.
+
+The way that a new employees time is filled entirely depends on that employee to 'win' the work from a PM or Senior Associate. This makes it very difficult to ever prove yourself.", 
+    "Pros
+
+Jeff Bezos and his 'S-Team' are brilliant and continue to make great decisions for long-term growth.
+
+You work with smart people, you work on exciting projects, you are pushed to your limits...which can be rewarding when you accomplish great things. The diversity of the potential work and innovation can be very alluring. I've often called Amazon my 'Sexy Mistress...she's emotionally abusive, but she's so sexy that I go back for more punishment.'
+
+Cons
+
+The management process is abusive, and I'm currently a manager. I've seen too much 'behind the wall' and hate how our individual performers can be treated. You are forced to ride people and stack rank employees...I've been forced to give good employees bad overall ratings because of politics and stack ranking.
+
+Advice to Management
+
+Don't pretend that the recent NY Times article was all about 'isolated incidents'. The culture IS abusive and it WILL backfire once stock value starts to drop. I'm an 8 year veteran and I no longer recommend former peers to interview with Amazon.", 
+    "Pros
+
+On the whole the company values work life balance and most teams seem to allow for a fair bit of flexibility. Good if you have a family and want a normal stable job.
+
+Really amazing resources and scientific education partnership programs available to labs and post docs. The education outreach program here is top notch, one of the best I've seen. Great outreach to schools, interns, post baccs, etc.
+
+A huge diversity of different science goes on here and there's always so much fun collaborative work opportunities.
+
+Great biking benefits, one of the best places to work if you bike!
+
+Cons
+
+Bit bureaucratic. HR can be slow and difficult to work with, for the hiring managers too. Unclear expectations when we hire people as well and what the hiring managers do vs the recruiters. I know this causes a lot of confusion for candidates.
+PhDs count for a lot but people with the actual technical skills to do the experiments don't always get acknowledged for their work.
+A lot depends on the lab you work for.
+
+Pay is low for the Seattle area. They try to make up for this with the work life balance and benefits. The benefits are OK given the pay but it does feel like they're just giving out the absolute bare minimum of what they can manage to pay, and not a cent more. They rely heavily on their brand name to attract new talent
+
+Traffic in SLU is awful. See note about the biking benefits above though. Unfortunately most lo employees have long commutes so they don't get to use this benefit.
+
+Advice to Management
+
+Year over year COLA needs to be raised a lot more
+
+EH&S needs more staff and resources", 
+    "Pros
+
+Rewarding work, Opportunities for Advancement, great health insurance.
+
+Cons
+
+Stressful work, long hours, not overtime eligible, modest time off." 
+  )
+)
+
+
+#### Joining datasets
+# Initialize rating and review fields into the job df, default to NA and will overwrite later
+df$rating <- NA
+df$review <- NA
+
+# Join reviews and overwrite where match occurs
+for (i in 1:nrow(reviews_df)) {
+  company_name <- reviews_df$review_company[i]
+  company_rating <- reviews_df$review_rating[i]
+  company_review <- reviews_df$relevant_review[i]
+  
+  df$rating[df$company == company_name] <- company_rating
+  df$review[df$company == company_name] <- company_review
+}
+
+
+#### verification
+df_with_ratings <- df %>% filter(!is.na(rating))
+df_with_reviews <- df %>% filter(!is.na(review))
+
+# save results to finalized dataset for submission
+
+write.csv(df, "C:/Users/amelia/OneDrive/College/Spring25/ITM340/GroupProject/Data/Final_InfoSystems.csv")
