@@ -1,0 +1,125 @@
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(rvest)
+
+# Read the CSV file
+filename = "InformationSystems_BoiseSeattleOregon.csv"
+
+## modify filepath to fit personal filepath
+filepath = "C:/Users/amelia/OneDrive/College/Spring25/ITM340/GroupProject/PrivateScrape"
+
+fullpath = paste0(filepath,"/", filename)
+
+df <- read.csv(fullpath, stringsAsFactors = FALSE)
+
+
+indices <- which(is.na(df$full_description)) #  & df$assigned_to == user)
+
+if (length(indices) == 0) {
+  print("Not missing")
+} else {
+  start_point <- min(indices)
+  end_point <- max(indices)
+  
+  # Loop through the selected range
+  for(i in start_point:end_point) {
+    url <- df$url[i]
+    
+    if(is.na(url) || url == "") {
+      print(paste("Skipping empty URL", i))
+      next
+    }
+    
+    print(paste("Scraping:", url))
+    
+    #scrape with a browser-like request
+    tryCatch({
+      response <- GET(url, user_agent("Mozilla/5.0"))
+      
+      # Checking if request was successful
+      if (http_error(response)) {
+        print(paste("Failed to fetch:", url))
+        next
+      }
+      
+      # Read page content
+      webpage <- content(response, as = "parsed", encoding = "UTF-8")
+      
+      # Extract job description
+      content <- webpage %>% html_nodes('.content') %>% html_text(trim = TRUE)
+      
+      if(length(content) > 0) {
+        job_description <- paste(content, collapse = " ")
+        df$full_description[i] <- job_description
+        print(paste("Updated index", i, "with job description."))
+        
+        # Save the updated CSV after each scrape
+        write.csv(df, fullpath, row.names = FALSE)
+      } else {
+        print(paste("No content found at index", i))
+      }
+      
+      # Delay to prevent blocking
+      Sys.sleep(1)
+      
+    }, error = function(e) {
+      print(paste("Error scraping", url, "at index", i, ":", e$message))
+    })
+  }
+  
+  print("Scraping complete, file updated.")
+}
+
+
+
+
+###### TESTING
+
+df1 <- df[df$full_description == "",]
+
+url <- "https://jobviewtrack.com/en-gb/job-131e41644302001c4a15540a070f4e341c53000d0453794e5e585f0d1b17073b460501020b1567691a0e0601474a4944420a4f3d4217551101151747244e150410005e2974434b0b1d034600490c06413d02065506011d0a0a645b4b44070a1c253d4e050713030611491b0649205358494840443c0b4401520a1c186c341c53000d0453794e5e585f0d1b17073b460501020b15641943505d/5f872e31d720771c4144e7b5f9c2d96f.html?affid=213e213hd12344552"
+
+# response <- GET(url, user_agent("Mozilla/5.0"))
+
+page <- read_html(url)
+
+description <- page %>% html_nodes(".content") %>% html_text()
+
+# raw_data <- content(response, "text")
+
+# json_data <- fromJSON(raw_data)
+
+df <- df %>%
+  mutate(full_description = ifelse(url == target_url, new_description, full_description))
+
+
+###############
+
+# Filter dataframe where full_description is empty
+df1 <- df[df$full_description == "", ]
+
+# Define target URL
+target_url <- "https://jobviewtrack.com/en-gb/job-4f18416b4401030a072745111e080d024574110b011d4348544c43662907421844433b041c110c43116a3a16585d544e48443b0b441c4e0a0b080f0967661d0d05170a7f584e450a060d4e154e613b181d13004d543c0c104245544e4405016f1547155059/083b5d612fba441c296d47d1a5623599.html?affid=b4275feea7bbbb542013842f8f7f80e6"
+# Fetch the webpage content
+page <- read_html(target_url)
+
+# Extract text from element with class ".content"
+new_description <- page %>% html_nodes(".content") %>% html_text() %>% trimws()
+
+# Update the "full_description" column where 'url' matches 'target_url'
+df <- df %>%
+  mutate(full_description = ifelse(url == target_url, new_description, full_description))
+
+# Save the modified dataframe back to CSV (overwriting the file)
+write.csv(df, fullpath, row.names = FALSE)
+
+
+
+
+
+
+
+
+
+
