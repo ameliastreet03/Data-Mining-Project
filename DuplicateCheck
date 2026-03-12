@@ -1,0 +1,33 @@
+# Load necessary library
+library(dplyr)
+
+# Read the CSV file
+  # my personally scraped postings
+# filename = "InformationSystems_BoiseSeattleOregon.csv"
+filename <- "InformationSystems_SeattleBoiseOregon.csv"
+
+####### modify filepath to fit personal filepath
+filepath = "C:/Users/amelia/OneDrive/College/Spring25/ITM340/GroupProject/PrivateScrape/Merge"
+
+fullpath = paste0(filepath,"/", filename)
+
+df <- read.csv(fullpath, stringsAsFactors = FALSE)
+
+# Remove unwanted columns
+df <- df %>% select(-X)
+
+# Check for duplicate rows
+duplicates <- df[duplicated(df) | duplicated(df, fromLast = TRUE), ]
+
+# Print the duplicates
+print(duplicates)
+
+# Save duplicate records to a new CSV file
+write.csv(duplicates, "duplicates.csv", row.names = FALSE)
+
+# remove duplicat rows (keeping first occurence)
+df_unique <- df[!duplicated(df), ]
+
+# save results to cleaned file
+finalpath <- paste0(filepath, "/", "IS_BoiseSeattleOregon_Clean.csv")
+write.csv(df_unique, finalpath, row.names=FALSE)
