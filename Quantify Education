@@ -1,0 +1,73 @@
+# Code based on: https://medium.com/@brianward1428/exploring-the-job-market-for-data-scientists-and-data-analysts-in-boston-new-york-and-9b3c32210334
+
+df <- read.csv("C:/Users/amelia/OneDrive/College/Spring25/ITM340/GroupProject/DataPrep/IS_Postings_With_NewVars.csv")
+
+#### Identify education ####
+words_high_school <- c()
+words_bachelors <- c()
+words_masters <-  c()
+words_doctorate <-  c()
+
+# Create Columns
+# Create Columns
+df$high_school <- NA
+df$bachelors <- NA
+df$masters <- NA
+df$doctorate <- NA
+
+# Determine how str_detect works
+str_detect(df$full_description[1], "critical thinking")
+
+# Prepare text for analysis
+df$full_description_edited <- df$full_description %>% tolower() %>% removePunctuation() %>% stripWhitespace()
+
+
+# For each job description, search for keywords
+for(i in 1:nrow(df)){
+  
+  print(i)
+  
+  # Search high school keywords
+  high <- c()
+  for(word in words_high_school){
+    high1 <- str_detect(df$full_description_edited[i], word)
+    high <- c(high, high1)
+  }
+  
+  # Search bachelors keywords
+  bach <- c()
+  for(word in words_bachelors){
+    bach1 <- str_detect(df$full_description_edited[i], word)
+    bach <- c(bach, bach1)
+  }
+  
+  # Search masters keywords
+  mach <- c()
+  for(word in words_masters){
+    mach1 <- str_detect(df$full_description_edited[i], word)
+    mach <- c(mach, mach1)
+  }
+  
+  # Search for doctorate
+  doc <- c()
+  for(word in words_doctorate){
+    doc1 <- str_detect(df$full_description_edited[i], word)
+    doc <- c(doc, doc1)
+  }
+  
+  # determine if edu keywords have been found in a job description
+  df$high_school[i] <- ifelse(sum(high) >= 1, TRUE, FALSE)
+  df$bachelors[i] <- ifelse(sum(bach) >= 1, TRUE, FALSE)
+  df$masters[i] <- ifelse(sum(mach) >= 1, TRUE, FALSE)
+  df$doctorate[i] <- ifelse(sum(doc) >= 1, TRUE, FALSE)
+}
+
+# Create min education column
+# Start High and go low
+df$min_ed <- NA
+df[which(df$doctorate == TRUE), "min_ed"]<-"doctorate"
+df[which(df$masters == TRUE), "min_ed"]<- "masters"
+df[which(df$bachelors == TRUE), "min_ed"]<-"bachelors"
+df[which(df$high_school == TRUE), "min_ed"]<-"high school"
+
+summary(as.factor(df$min_ed))
