@@ -1,0 +1,60 @@
+# Scrap job postings from careerjet.api
+
+install.packages("dplyr")
+# Import Libraries
+library(httr)
+library(jsonlite)
+library(dplyr)
+
+# define URL
+base_url <- 'http://public.api.careerjet.net/'
+end_point <- "search"
+url <- paste0(base_url, end_point)
+
+bucket <- data.frame()
+locations <- c("Boise", "Oregon", "Seattle")
+
+for (location in locations) {
+  i <- 1  # Reset page counter for each location
+  stopping_point <- 999999  # Reset stopping condition for each location
+  
+  while (i < stopping_point) {
+    response <- GET(url, query = list(
+      keywords = 'Information Systems',
+      location = location,
+      affid = '213e213hd12344552', 
+      user_ip = '11.22.33.44',
+      user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0',
+      page = i
+    ))
+    
+    raw_data <- content(response, "text")
+    json_data <- fromJSON(raw_data)
+    
+    jobs_data <- json_data$jobs
+    
+    if (length(jobs_data) == 0) {
+      break  # Stop if no jobs are returned
+    }
+    
+    # Add a column for location to keep track of results
+    jobs_data$location <- location
+    
+    bucket <- bind_rows(bucket, jobs_data)
+    
+    stopping_point <- json_data$pages  # Update stopping condition
+    i <- i + 1
+  }
+}
+View(bucket)
+
+bucket <- distinct(bucket)
+
+filepath = "C:/Users/amelia/OneDrive/College/Spring25/ITM340/GroupProject/Code/ScrapeDescription"
+
+fullpath2 <- paste0(filepath, "/", "InformationSystems_Boise.csv")
+
+write.csv(bucket, fullpath2)
+
+duplicates <- bucket[duplicated(bucket) | duplicated(bucket, fromLast = TRUE), ]
+
